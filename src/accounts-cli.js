@@ -18,7 +18,8 @@ import { stdin, stdout } from 'process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { exec } from 'child_process';
-import { ACCOUNT_CONFIG_PATH } from './constants.js';
+import net from 'net';
+import { ACCOUNT_CONFIG_PATH, DEFAULT_PORT } from './constants.js';
 import {
     getAuthorizationUrl,
     startCallbackServer,
@@ -28,6 +29,51 @@ import {
 } from './oauth.js';
 
 const MAX_ACCOUNTS = 10;
+const SERVER_PORT = process.env.PORT || DEFAULT_PORT;
+
+/**
+ * Check if the Antigravity Proxy server is running
+ * Returns true if port is occupied
+ */
+function isServerRunning() {
+    return new Promise((resolve) => {
+        const socket = new net.Socket();
+        socket.setTimeout(1000);
+
+        socket.on('connect', () => {
+            socket.destroy();
+            resolve(true); // Server is running
+        });
+
+        socket.on('timeout', () => {
+            socket.destroy();
+            resolve(false);
+        });
+
+        socket.on('error', (err) => {
+            socket.destroy();
+            resolve(false); // Port free
+        });
+
+        socket.connect(SERVER_PORT, 'localhost');
+    });
+}
+
+/**
+ * Enforce that server is stopped before proceeding
+ */
+async function ensureServerStopped() {
+    const isRunning = await isServerRunning();
+    if (isRunning) {
+        console.error(`
+\x1b[31mError: Antigravity Proxy server is currently running on port ${SERVER_PORT}.\x1b[0m
+
+Please stop the server (Ctrl+C) before adding or managing accounts.
+This ensures that your account changes are loaded correctly when you restart the server.
+`);
+        process.exit(1);
+    }
+}
 
 /**
  * Create readline interface
@@ -183,7 +229,51 @@ async function addAccount(existingAccounts) {
 }
 
 /**
- * Interactive add accounts flow
+ * Interactive remove accounts flow
+ */
+async function interactiveRemove(rl) {
+    while (true) {
+        const accounts = loadAccounts();
+        if (accounts.length === 0) {
+            console.log('\nNo accounts to remove.');
+            return;
+        }
+
+        displayAccounts(accounts);
+        console.log('\nEnter account number to remove (or 0 to cancel)');
+
+        const answer = await rl.question('> ');
+        const index = parseInt(answer, 10);
+
+        if (isNaN(index) || index < 0 || index > accounts.length) {
+            console.log('\n❌ Invalid selection.');
+            continue;
+        }
+
+        if (index === 0) {
+            return; // Exit
+        }
+
+        const removed = accounts[index - 1]; // 1-based to 0-based
+        const confirm = await rl.question(`\nAre you sure you want to remove ${removed.email}? [y/N]: `);
+
+        if (confirm.toLowerCase() === 'y') {
+            accounts.splice(index - 1, 1);
+            saveAccounts(accounts);
+            console.log(`\n✓ Removed ${removed.email}`);
+        } else {
+            console.log('\nCancelled.');
+        }
+
+        const removeMore = await rl.question('\nRemove another account? [y/N]: ');
+        if (removeMore.toLowerCase() !== 'y') {
+            break;
+        }
+    }
+}
+
+/**
+ * Interactive add accounts flow (Main Menu)
  */
 async function interactiveAdd(rl) {
     const accounts = loadAccounts();
@@ -191,13 +281,19 @@ async function interactiveAdd(rl) {
     if (accounts.length > 0) {
         displayAccounts(accounts);
 
-        const choice = await rl.question('\n(a)dd new account(s) or (f)resh start? [a/f]: ');
+        const choice = await rl.question('\n(a)dd new, (r)emove existing, or (f)resh start? [a/r/f]: ');
+        const c = choice.toLowerCase();
 
-        if (choice.toLowerCase() === 'f') {
+        if (c === 'r') {
+            await interactiveRemove(rl);
+            return; // Return to main or exit? Given this is "add", we probably exit after sub-task.
+        } else if (c === 'f') {
             console.log('\nStarting fresh - existing accounts will be replaced.');
             accounts.length = 0;
-        } else {
+        } else if (c === 'a') {
             console.log('\nAdding to existing accounts.');
+        } else {
+            console.log('\nInvalid choice, defaulting to add.');
         }
     }
 
@@ -305,12 +401,14 @@ async function main() {
     try {
         switch (command) {
             case 'add':
+                await ensureServerStopped();
                 await interactiveAdd(rl);
                 break;
             case 'list':
                 await listAccounts();
                 break;
             case 'clear':
+                await ensureServerStopped();
                 await clearAccounts(rl);
                 break;
             case 'verify':
@@ -323,6 +421,10 @@ async function main() {
                 console.log('  node src/accounts-cli.js verify  Verify account tokens');
                 console.log('  node src/accounts-cli.js clear   Remove all accounts');
                 console.log('  node src/accounts-cli.js help    Show this help');
+                break;
+            case 'remove':
+                await ensureServerStopped();
+                await interactiveRemove(rl);
                 break;
             default:
                 console.log(`Unknown command: ${command}`);

@@ -10,6 +10,7 @@
     "accounts": "node src/accounts-cli.js",
     "accounts:add": "node src/accounts-cli.js add",
     "accounts:list": "node src/accounts-cli.js list",
+    "accounts:remove": "node src/accounts-cli.js remove",
     "accounts:verify": "node src/accounts-cli.js verify",
     "test": "node tests/run-all.cjs",
     "test:signatures": "node tests/test-thinking-signatures.cjs",
