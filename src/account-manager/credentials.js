@@ -192,12 +192,15 @@ export async function discoverProject(token) {
         // Check if this is a free tier (raw API values contain 'free')
         const isFree = tierId.toLowerCase().includes('free');
 
-        // For non-free tiers, pass DEFAULT_PROJECT_ID as the GCP project
-        // The API requires a project for paid tier onboarding
+        // FIX: For g1-pro-tier (paid), do NOT send the default project ID.
+        // Sending the default project causes 400 Invalid Argument because it conflicts with the paid tier provisioning.
+        const shouldSendProject = !isFree && tierId !== 'g1-pro-tier';
+
+        // For non-free tiers, pass DEFAULT_PROJECT_ID as the GCP project ONLY if it's not a pro tier that needs auto-provisioning
         const onboardedProject = await onboardUser(
             token,
             tierId,
-            isFree ? null : DEFAULT_PROJECT_ID
+            shouldSendProject ? DEFAULT_PROJECT_ID : null
         );
         if (onboardedProject) {
             logger.success(`[AccountManager] Successfully onboarded, project: ${onboardedProject}`);
