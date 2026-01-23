@@ -10,7 +10,7 @@ A proxy server that exposes an **Anthropic-compatible API** backed by **Antigrav
 ![Antigravity Claude Proxy Banner](images/banner.png)
 
 ## How It Works jhgjkyfgkjhygfykjhg
-
+gfjhfhjgfjh
 ```
 ┌──────────────────┐     ┌─────────────────────┐     ┌────────────────────────────┐
 │   Claude Code    │────▶│  This Proxy Server  │────▶│  Antigravity Cloud Code    │
