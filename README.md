@@ -1,5 +1,4 @@
 # Antigravity Claude Proxy
-
 [![npm version](https://img.shields.io/npm/v/antigravity-claude-proxy.svg)](https://www.npmjs.com/package/antigravity-claude-proxy)
 [![npm downloads](https://img.shields.io/npm/dm/antigravity-claude-proxy.svg)](https://www.npmjs.com/package/antigravity-claude-proxy)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -10,7 +9,7 @@ A proxy server that exposes an **Anthropic-compatible API** backed by **Antigrav
 
 ![Antigravity Claude Proxy Banner](images/banner.png)
 
-## How It Works
+## How It Works jhgjkyfgkjhygfykjhg
 
 ```
 ┌──────────────────┐     ┌─────────────────────┐     ┌────────────────────────────┐
